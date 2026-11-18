@@ -140,9 +140,80 @@
     return hash >>> 0;
   }
 
+  // Full roster, so typing just a FIRST name still bakes to the same
+  // result as the person's full name (which is what's pre-printed on
+  // the party slides). Keep this list in sync with add_team_type_slides.py.
+  var ROSTER = [
+    "James Gilmore",
+    "Natasha Bouchet", "Adam Herbert", "Boris Contreras", "CW Paglinawan",
+    "Liz Luzcando", "Rohan Antony", "Sheila Leese", "Tochi Chukwu",
+    "Ananya Mysuru Shylaprakash", "Devin Fitts", "Hadeer Davenport",
+    "Hardik Bhatt", "Kris Quigley", "Lochlan Collins", "Nathan McCurry",
+    "Nikki Raviprolu",
+    "Mario Flores", "Mugdha Chaudhari", "Nancy Diaz", "Robert Seward",
+    "Zarak Khan",
+    "Andres Regino de La Cruz", "Divya Suhag", "Kyler Gray", "Morgan Green",
+    "Nico Fano",
+    "Bharath Narayanan", "Kratika Nayak", "Sushmita Dhanda",
+    "Tejaswini Sapkota", "Teylor Spradlin",
+    "Andres Prieto", "Ben Potash", "Carson Alsup", "Dan Ingle",
+    "Jesse Chambers", "Karthika Suresh Sasikala", "Mathew Madsen",
+    "Rachel Melilli", "Ted Boland",
+    "Alex Chacon", "Andrew Loucks", "Carter Howie", "Cory Phelps",
+    "Jennifer Gao", "Nidhi Mehta", "Nikhil Jain", "Sharath Prakash",
+    "Tanuj Babele", "Tim Szaflarski", "Sri Jayaram",
+    "Aishwarya Tumkur Venkatesh", "Bash Ramasami", "Calin Shirley",
+    "David Cascio", "Josh Nugent", "Navya Pasapula", "Peyush Maini",
+    "Roberto Arizmendi"
+  ];
+
+  // Hand-picked names for VIPs who didn't love their hash result --
+  // keep in sync with NAME_OVERRIDES in add_team_type_slides.py.
+  var NAME_OVERRIDES = {
+    "james gilmore": "Chief Vanilla Crumblecrust",
+    "roberto arizmendi": "Baron Nutmeg Doughface"
+  };
+
+  // Map first name (lowercase) -> full name, but ONLY for first names
+  // that belong to exactly one roster person. If two people share a
+  // first name (e.g. two "Andres"), typing just the first name falls
+  // back to hashing the literal text instead of guessing wrong.
+  var FIRST_NAME_MAP = (function () {
+    var counts = {};
+    ROSTER.forEach(function (full) {
+      var first = full.trim().split(/\s+/)[0].toLowerCase();
+      counts[first] = (counts[first] || 0) + 1;
+    });
+    var map = {};
+    ROSTER.forEach(function (full) {
+      var first = full.trim().split(/\s+/)[0].toLowerCase();
+      if (counts[first] === 1) {
+        map[first] = full;
+      }
+    });
+    return map;
+  })();
+
+  function resolveFullName(rawName) {
+    var clean = rawName.trim();
+    var lower = clean.toLowerCase();
+    for (var i = 0; i < ROSTER.length; i++) {
+      if (ROSTER[i].toLowerCase() === lower) return ROSTER[i];
+    }
+    if (FIRST_NAME_MAP.hasOwnProperty(lower)) {
+      return FIRST_NAME_MAP[lower];
+    }
+    return clean; // not a known roster person -- just use what they typed
+  }
+
   function bakeName(rawName) {
-    var clean = rawName.trim().toLowerCase();
-    if (!clean) return null;
+    if (!rawName || !rawName.trim()) return null;
+    var resolved = resolveFullName(rawName);
+    var overrideKey = resolved.trim().toLowerCase();
+    if (NAME_OVERRIDES.hasOwnProperty(overrideKey)) {
+      return NAME_OVERRIDES[overrideKey];
+    }
+    var clean = resolved.trim().toLowerCase();
     var h = hashString(clean);
     var title = TITLES[h % TITLES.length];
     var flavor = FLAVORS[Math.floor(h / TITLES.length) % FLAVORS.length];
